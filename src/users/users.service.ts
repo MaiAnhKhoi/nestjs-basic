@@ -4,7 +4,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserDocument } from './schemas/user.schemas';
 import mongoose, { Model } from 'mongoose';
-import { genSaltSync, hashSync } from 'bcryptjs';
+import { genSaltSync, hashSync, compareSync } from 'bcryptjs';
 
 @Injectable()
 export class UsersService {
@@ -15,6 +15,10 @@ export class UsersService {
     const hash = hashSync(password, salt);
 
     return hash;
+  }
+
+  isValidPassword(password: string, hashedPassword: string): boolean {
+    return compareSync(password, hashedPassword);
   }
   async create(createUserDto: CreateUserDto) {
     const hashedPassword = this.getHashPassword(createUserDto.password);
@@ -36,6 +40,9 @@ export class UsersService {
     return this.userModel.findById(id);
   }
 
+  async findOneByUsername(username: string) {
+    return this.userModel.findOne({ email: username });
+  }
   async update(updateUserDto: UpdateUserDto) {
     return await this.userModel.updateOne(
       { _id: updateUserDto._id },
@@ -43,7 +50,10 @@ export class UsersService {
     );
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  async remove(id: string) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return `Invalid user ID`;
+    }
+    return await this.userModel.deleteOne({ _id: id });
   }
 }
